@@ -27,7 +27,17 @@
 
   // Smooth scroll with proper offset is handled by CSS scroll-behavior and scroll-margin-top on sections
 
-  // Contact form handling → opens mail client with prefilled content
+  // Page enter animation — remove class after first frame on load for smooth reveal
+  function triggerPageEnter() {
+    document.body.classList.remove('page-enter');
+  }
+  if (document.readyState === 'complete') {
+    requestAnimationFrame(triggerPageEnter);
+  } else {
+    window.addEventListener('load', () => requestAnimationFrame(triggerPageEnter));
+  }
+
+  // Contact form handling → send GET request to webhook with query params
   const form = document.getElementById('contact-form');
   const statusEl = document.getElementById('form-status');
   if (form) {
@@ -36,26 +46,28 @@
       statusEl.textContent = '';
 
       const name = (document.getElementById('name') || {}).value?.trim() || '';
-      const email = (document.getElementById('email') || {}).value?.trim() || '';
+      const yourEmail = (document.getElementById('email') || {}).value?.trim() || '';
       const message = (document.getElementById('message') || {}).value?.trim() || '';
 
-      if (!name || !email || !message) {
+      if (!name || !yourEmail || !message) {
         statusEl.textContent = 'Please complete all fields.';
         return;
       }
 
-      const subject = encodeURIComponent(`ODAS Contact — ${name}`);
-      const bodyLines = [
-        `From: ${name} (${email})`,
-        '',
-        message,
-      ];
-      const body = encodeURIComponent(bodyLines.join('\n'));
-      const mailto = `mailto:info@odasagency.com?subject=${subject}&body=${body}`;
+      const endpoint = 'https://one-anemone-able.ngrok-free.app/webhook-test/ee7d496c-9ada-4b75-82f2-c64fa8f1e759';
+      const params = new URLSearchParams({ name, yourEmail, message });
+      const url = `${endpoint}?${params.toString()}`;
 
-      // Attempt to open the user's email client
-      window.location.href = mailto;
-      statusEl.textContent = "Thanks! Your email client should open shortly.";
+      statusEl.textContent = 'Sending…';
+      fetch(url, { method: 'GET', mode: 'no-cors', cache: 'no-cache', keepalive: true })
+        .then(() => {
+          statusEl.textContent = "Thanks! We'll be in touch shortly.";
+          try { form.reset(); } catch (_) {}
+        })
+        .catch(() => {
+          // Even with errors, no-cors may prevent details; show generic message
+          statusEl.textContent = "Thanks! We'll be in touch shortly.";
+        });
     });
   }
 
