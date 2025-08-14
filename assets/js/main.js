@@ -37,7 +37,7 @@
     window.addEventListener('load', () => requestAnimationFrame(triggerPageEnter));
   }
 
-  // Contact form handling → send GET request to webhook with query params
+  // Contact form handling → send POST request to webhook (CORS-safe)
   const form = document.getElementById('contact-form');
   const statusEl = document.getElementById('form-status');
   if (form) {
@@ -54,18 +54,46 @@
         return;
       }
 
-      const endpoint = 'https://one-anemone-able.ngrok-free.app/webhook-test/ee7d496c-9ada-4b75-82f2-c64fa8f1e759';
+      // Email format validation
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+      const emailInput = document.getElementById('email');
+      if (!emailPattern.test(yourEmail)) {
+        statusEl.textContent = 'Please enter a valid email address.';
+        if (emailInput) {
+          emailInput.setAttribute('aria-invalid', 'true');
+          try { emailInput.focus(); } catch (_) {}
+        }
+        return;
+      }
+      if (emailInput) emailInput.removeAttribute('aria-invalid');
+
+      const endpoint = 'https://one-anemone-able.ngrok-free.app/webhook/ee7d496c-9ada-4b75-82f2-c64fa8f1e759';
       const params = new URLSearchParams({ name, yourEmail, message });
-      const url = `${endpoint}?${params.toString()}`;
 
       statusEl.textContent = 'Sending…';
-      fetch(url, { method: 'GET', mode: 'no-cors', cache: 'no-cache', keepalive: true })
+
+      // Prefer sendBeacon (no CORS required, fire-and-forget). Fallback to POST fetch with safe-listed content-type.
+      const sentWithBeacon = typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function'
+        ? navigator.sendBeacon(endpoint, params)
+        : false;
+
+      if (sentWithBeacon) {
+        statusEl.textContent = "Thanks! We'll be in touch shortly.";
+        try { form.reset(); } catch (_) {}
+        return;
+      }
+
+      fetch(endpoint, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: params
+      })
         .then(() => {
           statusEl.textContent = "Thanks! We'll be in touch shortly.";
           try { form.reset(); } catch (_) {}
         })
         .catch(() => {
-          // Even with errors, no-cors may prevent details; show generic message
           statusEl.textContent = "Thanks! We'll be in touch shortly.";
         });
     });
