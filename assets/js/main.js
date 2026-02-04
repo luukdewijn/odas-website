@@ -67,7 +67,7 @@
       }
       if (emailInput) emailInput.removeAttribute('aria-invalid');
 
-      const endpoint = 'https://one-anemone-able.ngrok-free.app/webhook/ee7d496c-9ada-4b75-82f2-c64fa8f1e759';
+      const endpoint = 'https://n8n.odasagency.com/webhook-test/c4fb2295-71ab-4579-a711-6c363e305cc9';
       const params = new URLSearchParams({ name, yourEmail, message });
 
       statusEl.textContent = 'Sending…';
